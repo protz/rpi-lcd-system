@@ -104,7 +104,7 @@ let display_thread () =
           String.sub line2 offset lcd_width
         );
         lwt () = Lwt_unix.sleep 0.2 in
-        if offset = lcd_width - 1 && not loop then
+        if offset = width - lcd_width && not loop then
           (* Once we're done, the next action is: back to looping the background
            * text. *)
           Lwt.return (DisplayBackground background_txt)
@@ -157,6 +157,8 @@ let display_thread () =
 
 let thread_fip () =
   send_display_msg ~background:() "Détendez-vous, vous êtes sur FIP!";
+  lwt () = Lwt_unix.sleep 2. in
+  send_display_msg "Mer de cristal, vous naviguez sur FIP!\n    (Oh yeah)";
   let rec loop () =
     lwt msg = CQ.take menu_queue in
     match msg with
@@ -178,14 +180,14 @@ and entry =
   | Func of (unit -> unit Lwt.t)
 
 let main_menu : menu = [
-  "Radios", Menu [
-    "FIP", Func thread_fip;
-    "France Culture", Func (fun () -> Lwt_io.printl "entry 2");
+  "1. Radios", Menu [
+    "1.1 FIP", Func thread_fip;
+    "1.2 France Culture", Func (fun () -> Lwt_io.printl "entry 2");
   ];
 
-  "PulseAudio", Menu [
-    "Equalizer", Func (fun () -> Lwt_io.printl "entry 5");
-    "Stream Name", Func (fun () -> Lwt_io.printl "entry 10");
+  "2. PulseAudio", Menu [
+    "2.1 Equalizer", Func (fun () -> Lwt_io.printl "entry 5");
+    "2.2 Stream Name", Func (fun () -> Lwt_io.printl "entry 10");
   ];
 ]
 
@@ -287,7 +289,7 @@ let main: unit Lwt.t =
 
   Misc.draw_caml_logo ();
 
-  lwt () = Lwt_unix.sleep 1. in
+  lwt () = Lwt_unix.sleep 3. in
 
   LCD.backlight LCD.teal;
 
@@ -305,6 +307,8 @@ let _ =
 
   LCD.clear ();
   LCD.home ();
-  LCD.message "Exited"
+  LCD.blink false;
+  LCD.cursor false;
+  LCD.backlight LCD.off;
 ;;
 
