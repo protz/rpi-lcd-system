@@ -103,7 +103,7 @@ let display_thread () =
           String.sub line1 offset lcd_width ^ "\n" ^
           String.sub line2 offset lcd_width
         );
-        lwt () = Lwt_unix.sleep 0.2 in
+        lwt () = Lwt_unix.sleep 0.5 in
         if offset = width - lcd_width && not loop then
           (* Once we're done, the next action is: back to looping the background
            * text. *)
@@ -189,6 +189,36 @@ let main_menu : menu = [
     "2.1 Equalizer", Func (fun () -> Lwt_io.printl "entry 5");
     "2.2 Stream Name", Func (fun () -> Lwt_io.printl "entry 10");
   ];
+
+  "3. Test", Menu [
+    "3.1 Test autoscroll", Func (fun () ->
+      (* Since we're bypassing the display thread for this test, wait for a
+       * while the display thread is quiet. *)
+      lwt () = Lwt_unix.sleep 2. in
+      let str = Misc.fix_accents "Détendez-vous, vous êtes sur FIP !" in
+      LCD.home ();
+      LCD.message (String.sub str 0 16);
+      LCD.autoscroll true;
+      let l = String.length str in
+      let rec loop i =
+        lwt () = Lwt_unix.sleep 0.5 in
+        if i = l then begin
+          LCD.message " ";
+          lwt () = Lwt_unix.sleep 0.5 in
+          LCD.autoscroll false;
+          Lwt.return ()
+        end else begin
+          LCD.message (String.sub str i 1);
+          loop (i + 1)
+        end
+      in
+      loop 16
+      (* The conclusion of this test is: using the autoscroll features from the
+       * LCD doesn't give visually better results than re-writing everything by
+       * hand as the display thread does. *)
+    );
+  ];
+
 ]
 
 let handle_menu (m: menu) =
@@ -283,8 +313,6 @@ let button_thread () =
 let main: unit Lwt.t =
   let busnum = if Pi.get_revision () = 2 then 1 else 0 in
   LCD.init ~busnum ();
-  LCD.blink true;
-  LCD.cursor true;
   LCD.backlight LCD.yellow;
 
   Misc.draw_caml_logo ();
@@ -306,9 +334,6 @@ let _ =
   Lwt_main.run main;
 
   LCD.clear ();
-  LCD.home ();
-  LCD.blink false;
-  LCD.cursor false;
   LCD.backlight LCD.off;
 ;;
 

@@ -625,17 +625,15 @@ let unique xs =
 ;;
 
 let fix_accents str =
+  let re_accents = Pcre.regexp
+    ~flags:[ `UTF8 ]
+    ("[" ^ String.concat "" (List.map fst accents_table) ^ "]")
+  in
+
   let collect_accents () =
-    let accents: int list ref = ref [] in
-    for i = 0 to max (String.length str - 2) 0 do
-      (* omg so dirty *)
-      let c = String.sub str i 2 in
-      try
-        accents := List.assoc c accents_table :: !accents
-      with Not_found ->
-        ()
-    done;
-    !accents
+    let accents = Array.to_list (Pcre.extract_all ~rex:re_accents str) in
+    let accents = List.map (fun x -> x.(0)) accents in
+    List.map (fun c -> List.assoc c accents_table) accents
   in
 
   let shuffle_cgram () =
@@ -659,13 +657,6 @@ let fix_accents str =
   in
 
   let accents = collect_accents () in
-  let n = List.length accents in
-  let accents = unique accents in
-  (* if n > 0 then
-    Printf.eprintf
-      "Found %d accents: %s\n%!"
-      n
-      (String.concat " " (List.map string_of_int accents)); *)
 
   let cgram_state_l = Array.to_list cgram_state in
   if List.exists (fun c -> not (List.mem c cgram_state_l)) accents then begin
@@ -679,29 +670,16 @@ let fix_accents str =
 
   let rev_table = List.mapi (fun i x -> x, i) (Array.to_list cgram_state) in
 
-  let i = ref 0 in
-  let j = ref 0 in
-  let dst = String.make (String.length str - n) ' ' in
-  while !i <= String.length str - 2 do
-    try
-      let c = List.assoc (String.sub str !i 2) accents_table in
-      let c = List.assoc c rev_table in
-      (* Printf.eprintf "str[%d] = accent %d, putting at pos %d\n%!"
-        !i c !j; *)
-      dst.[!j] <- Char.chr c;
-      i := !i + 2;
-      j := !j + 1;
-    with Not_found ->
-      dst.[!j] <- str.[!i];
-      i := !i + 1;
-      j := !j + 1;
-  done;
-  if !i = String.length str - 1 then
-    dst.[!j] <- str.[!i];
-
-  dst
+  Pcre.substitute ~rex:re_accents ~subst:(fun c ->
+    let offset = List.assoc c accents_table in
+    let cgram_pos = List.assoc offset rev_table in
+    String.make 1 (Char.chr cgram_pos)
+  ) str
 ;;
     
 let fix_accents str =
-  if str = "" then "" else fix_accents str
+  try
+    fix_accents str
+  with Not_found ->
+    str
 ;;
