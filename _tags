@@ -1,2 +1,3 @@
 true: syntax(camlp4o), syntax(lwt.syntax), package(lwt.syntax), package(lwt), \
-  package(lwt.unix), package(adafruit-lcd), package(pcre), annot
+  package(lwt.unix), package(adafruit-lcd), package(pcre), package(cohttp.lwt), \
+  package(uri), package(yojson), annot

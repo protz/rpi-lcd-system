@@ -11,5 +11,5 @@ LCD + backpack for the Raspberry Pi:
 
 Once I get the corresponding hardware:
 
-* turn on relays for my drawing room's light and hi-fi system whenever my tablet
+* turn on relays for my living room's light and hi-fi system whenever my tablet
   shows up on the wifi network (meaning I'm home)
