@@ -100,6 +100,13 @@ let polling_thread () =
           state := After;
       ) lines;
 
+      (* No entry! *)
+      if !state = Before then begin
+        entry.artist <- "Détendez-vous";
+        entry.title <- "Vous êtes sur FIP!";
+        entry.album <- "(En direct)";
+        entry.year <- "";
+      end;
 
       (* Did the current song change? *)
       if entry <> !current_entry then begin
@@ -131,10 +138,26 @@ let polling_thread () =
   loop ()
 ;;
 
+let launch_mplayer () =
+  let child = Unix.fork () in
+  if child = 0 then
+    Unix.execvp "mplayer" [|
+      "mplayer";
+      "http://mp3.live.tv-radio.com/fip/all/fiphautdebit.mp3"
+    |]
+  else
+    child
+;;
+
 let thread () =
   Printf.printf "[fip] starting fip thread\n%!";
-  Lwt.pick [
+  let pid = launch_mplayer () in
+  lwt () = Lwt.pick [
+    (* Doesn't terminate. *)
     polling_thread ();
+    (* Button press = exit. *)
     Button.wait_for_button ();
-  ]
+  ] in
+  Unix.kill pid 15;
+  Lwt.return ()
 
