@@ -77,6 +77,7 @@ let handle_menu (m: menu) =
             lwt () = start_menu m in
             continue ()
         | Func f ->
+            Display.display "\n  ... starting";
             lwt () = f () in
             Printf.printf "[menu] function done\n%!";
             continue ()

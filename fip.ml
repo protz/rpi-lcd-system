@@ -33,7 +33,6 @@ let rec fetch_html (json_url: string): string Lwt.t =
         Printf.printf "[fip] network error\n%!";
         raise Network_error
   in
-  Printf.printf "[fip] got %d bytes\n%!" (String.length json);
   let json = Yojson.Safe.from_string json in
   let html =
     match json with
@@ -56,7 +55,6 @@ let polling_thread () =
   } in
 
   let rec loop () =
-    Printf.printf "[fip] loop\n%!";
     try_lwt
       (* The entry that we're about to build. *)
       let entry = { artist = ""; title = ""; year = ""; cover_url = ""; album = "" } in
@@ -109,9 +107,9 @@ let polling_thread () =
         current_entry := entry;
 
         (* Emit the actual notification. *)
-        let msg = Printf.sprintf "%s \n%s - %s %s "
-          !current_entry.title
+        let msg = Printf.sprintf "%s - %s \n%s %s "
           !current_entry.artist
+          !current_entry.title
           !current_entry.album
           !current_entry.year
         in
