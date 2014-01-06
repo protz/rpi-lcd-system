@@ -100,10 +100,7 @@ let thread () =
   let rec loop background_txt msg =
     begin match msg with
     | DisplayImmediate txt ->
-        lwt next_msg = Lwt.pick [
-          take_msg ();
-          scroll background_txt txt false
-        ] in
+        lwt next_msg = scroll background_txt txt false in
         loop background_txt next_msg
     | DisplayBackground txt ->
         lwt next_msg = Lwt.pick [

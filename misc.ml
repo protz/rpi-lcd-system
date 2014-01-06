@@ -606,24 +606,6 @@ let accents_table = [
 
 let cgram_state = Array.make 8 0;;
 
-let unique xs =
-  let xs = List.sort compare xs in
-  let rec loop xs x1 = function
-    | [] ->
-        List.rev (x1 :: xs)
-    | x2 :: rest ->
-        if x1 = x2 then
-          loop xs x1 rest
-        else
-          loop (x1 :: xs) x2 rest
-  in
-  match xs with
-  | [] ->
-      []
-  | x1 :: rest ->
-      loop [] x1 rest
-;;
-
 let fix_accents str =
   let re_accents = Pcre.regexp
     ~flags:[ `UTF8 ]
