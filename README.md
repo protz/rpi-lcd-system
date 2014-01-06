@@ -1,5 +1,5 @@
-The LCD system
---------------
+The Raspberry Pi LCD system
+---------------------------
 
 A series of modules written in OCaml to do various stuff using Adafruit's
 LCD + backpack for the Raspberry Pi:
