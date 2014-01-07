@@ -1,5 +1,7 @@
 open Lcd
 
+let cgram_state = Array.make 8 0;;
+
 let draw_caml_logo () =
   let chars = [
     [
@@ -789,6 +791,147 @@ let seven_segments =
   |]
 ;;
 
+type block = A | B | C | D | E | F | G | H | S | Z
+
+let blocks =
+  [
+  [
+    0b00001;
+    0b00011;
+    0b00011;
+    0b00011;
+    0b00011;
+    0b00011;
+    0b00011;
+    0b00001;
+  ];
+  [
+    0b11111;
+    0b01110;
+    0b00000;
+    0b00000;
+    0b00000;
+    0b00000;
+    0b01110;
+    0b11111;
+  ];
+  [
+    0b11111;
+    0b01111;
+    0b00011;
+    0b00011;
+    0b00011;
+    0b00011;
+    0b01111;
+    0b11111;
+  ];
+  [
+    0b11111;
+    0b11110;
+    0b11000;
+    0b11000;
+    0b11000;
+    0b11000;
+    0b11110;
+    0b11111;
+  ];
+  [
+    0b11111;
+    0b01110;
+    0b00000;
+    0b00000;
+    0b00000;
+    0b00000;
+    0b00000;
+    0b00000;
+  ];
+  [
+    0b10000;
+    0b11000;
+    0b11000;
+    0b11000;
+    0b11000;
+    0b11000;
+    0b11110;
+    0b11111;
+  ];
+  [
+    0b00001;
+    0b00011;
+    0b00011;
+    0b00011;
+    0b00011;
+    0b00011;
+    0b01111;
+    0b11111;
+  ];
+  [
+    0b11111;
+    0b01111;
+    0b00011;
+    0b00011;
+    0b00011;
+    0b00011;
+    0b00011;
+    0b00001;
+  ];
+]
+;;
+
+let block_letters =
+  [|
+    [ S; H; F; G ];
+    [ Z; A; Z; A ];
+    [ B; C; D; B ];
+    [ B; C; B; C ];
+    [ F; G; E; H ];
+    [ D; B; B; C ];
+    [ D; B; D; C ];
+    [ E; H; Z; A ];
+    [ D; C; D; C ];
+    [ D; C; B; C ]
+  |]
+
+let load_blocks () =
+  for i = 0 to 7 do
+    cgram_state.(i) <- 0;
+  done;
+  List.iteri LCD.new_char blocks
+;;
+
+let char_of_block = function
+  | A -> '\000'
+  | B -> '\001'
+  | C -> '\002'
+  | D -> '\003'
+  | E -> '\004'
+  | F -> '\005'
+  | G -> '\006'
+  | H -> '\007'
+  | Z -> ' '
+  | S -> '/'
+;;
+
+let block_digit digit pos =
+  let sequence = block_letters.(digit) in
+  let c1, c2, c3, c4 =
+    match List.map char_of_block sequence with
+    | [c1; c2; c3; c4 ] -> c1, c2, c3, c4
+    | _ -> assert false
+  in
+  LCD.move_cursor_abs (pos, 0);
+  LCD.message (Printf.sprintf "%c%c" c1 c2);
+  LCD.move_cursor_abs (pos, 1);
+  LCD.message (Printf.sprintf "%c%c" c3 c4);
+;;
+
+let block_colon pos =
+  LCD.move_cursor_abs (pos, 0);
+  LCD.message (Printf.sprintf "%c" (Char.chr 0b10100101));
+  LCD.move_cursor_abs (pos, 1);
+  LCD.message (Printf.sprintf "%c" (Char.chr 0b10100101));
+;;
+
 
 let accents_table = [
   "à", 16;
@@ -808,8 +951,6 @@ let accents_table = [
   "û", 43;
   "ü", 44;
 ];;
-
-let cgram_state = Array.make 8 0;;
 
 let fix_accents str =
   let re_accents = Pcre.regexp

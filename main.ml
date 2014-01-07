@@ -14,7 +14,10 @@ and entry =
   | Func of (unit -> unit Lwt.t)
 
 let main_menu : menu = [
-  "0. Heure", Func Heure.thread;
+  "0. Time", Menu [
+    "0.1 Version 1", Func Heure.thread1;
+    "0.2 Version 2", Func Heure.thread2;
+  ];
 
   "1. Radios", Menu [
     "1.1 FIP", Func Fip.thread;
