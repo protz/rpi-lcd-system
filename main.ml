@@ -14,6 +14,8 @@ and entry =
   | Func of (unit -> unit Lwt.t)
 
 let main_menu : menu = [
+  "0. Heure", Func Heure.thread;
+
   "1. Radios", Menu [
     "1.1 FIP", Func Fip.thread;
     "1.2 France Culture", Func (fun () -> Lwt_io.printl "entry 2");
@@ -25,7 +27,7 @@ let main_menu : menu = [
   ];
 
   "3. Test", Menu [
-    "3.1 Test autoscroll", Func (fun () ->
+    "3.1 Autoscroll", Func (fun () ->
       (* Since we're bypassing the display thread for this test, wait for a
        * while the display thread is quiet. *)
       lwt () = Lwt_unix.sleep 2. in
@@ -51,6 +53,24 @@ let main_menu : menu = [
        * LCD doesn't give visually better results than re-writing everything by
        * hand as the display thread does. *)
     );
+    "3.2 Segments", Func (fun () ->
+      (* Since we're bypassing the display thread for this test, wait for a
+       * while the display thread is quiet. *)
+      lwt () = Lwt_unix.sleep 0.5 in
+      LCD.clear ();
+      LCD.home ();
+      Misc.write_special_twodigits (1, 2) 0;
+      LCD.move_cursor_abs (5, 0);
+      LCD.message "heures";
+      LCD.move_cursor_abs (5, 1);
+      LCD.message ":50 minutes";
+      Button.wait_for_button ()
+    );
+  ];
+
+  "4. System", Menu [
+    "4.1 Power off", Func (fun () -> lwt _ = Lwt_unix.system "sudo /sbin/shutdown -h now" in Lwt.return ());
+    "4.2 Reboot", Func (fun () -> lwt _ = Lwt_unix.system "sudo /sbin/shutdown -r now" in Lwt.return ());
   ];
 
 ]

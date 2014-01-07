@@ -585,6 +585,211 @@ let accents_chars =
   |]
 ;;
 
+let seven_segments =
+  let nil = [ 0; 0; 0; 0; 0; 0; 0; 0 ] in
+  let a = [
+    [
+      0b00111;
+      0b00111;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000
+    ];
+    [
+      0b11100;
+      0b11100;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000
+    ];
+    nil; nil
+  ] in
+  let b = [
+    nil; [
+      0b00000;
+      0b00000;
+      0b00011;
+      0b00011;
+      0b00011;
+      0b00011;
+      0b00011;
+      0b00000
+    ];
+    nil; nil
+  ] in
+  let c = [
+    nil; nil;
+    nil; [
+      0b00000;
+      0b00011;
+      0b00011;
+      0b00011;
+      0b00011;
+      0b00011;
+      0b00000;
+      0b00000
+    ];
+  ] in
+  let d = [
+    nil; nil;
+    [
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00111;
+      0b00111
+    ];
+    [
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b11100;
+      0b11100
+    ];
+  ] in
+  let e = [
+    nil; nil;
+    [
+      0b00000;
+      0b11000;
+      0b11000;
+      0b11000;
+      0b11000;
+      0b11000;
+      0b00000;
+      0b00000
+    ]; nil
+  ] in
+  let f = [
+    [
+      0b00000;
+      0b00000;
+      0b11000;
+      0b11000;
+      0b11000;
+      0b11000;
+      0b11000;
+      0b00000
+    ]; nil; 
+    nil; nil
+  ] in
+  let g = [
+    [
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00111
+    ];
+    [
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b11100
+    ];
+    [
+      0b00111;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000
+    ];
+    [
+      0b11100;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00000
+    ];
+  ] in
+  let colon = [
+    [
+      0b00000;
+      0b00000;
+      0b00000;
+      0b00011;
+      0b00011;
+      0b00011;
+      0b00011;
+      0b00000
+    ];
+    [
+      0b00000;
+      0b00000;
+      0b00000;
+      0b11000;
+      0b11000;
+      0b11000;
+      0b11000;
+      0b00000
+    ];
+    [
+      0b00000;
+      0b00011;
+      0b00011;
+      0b00011;
+      0b00011;
+      0b00000;
+      0b00000;
+      0b00000
+    ];
+    [
+      0b00000;
+      0b11000;
+      0b11000;
+      0b11000;
+      0b11000;
+      0b00000;
+      0b00000;
+      0b00000
+    ];
+  ] in
+  let ( ++ ) quad1 quad2 =
+    List.map2 (fun bytes1 bytes2 ->
+      List.map2 (fun b1 b2 -> b1 lor b2) bytes1 bytes2
+    ) quad1 quad2
+  in
+  [|
+    a ++ b ++ c ++ d ++ e ++ f;
+    b ++ c;
+    a ++ b ++ g ++ e ++ d;
+    a ++ b ++ g ++ c ++ d;
+    f ++ b ++ g ++ c;
+    a ++ f ++ g ++ c ++ d;
+    a ++ f ++ c ++ d ++ e ++ g;
+    a ++ b ++ c;
+    a ++ b ++ c ++ d ++ e ++ f ++ g;
+    a ++ b ++ c ++ d ++ g;
+    colon;
+  |]
+;;
+
+
 let accents_table = [
   "à", 16;
   "â", 18;
@@ -664,4 +869,19 @@ let fix_accents str =
     fix_accents str
   with Not_found ->
     str
+;;
+
+let write_special_twodigits (i, j) pos =
+  (* Clear cgram state. *)
+  for i = 0 to 7 do
+    cgram_state.(i) <- 0;
+  done;
+  let quad1 = seven_segments.(i) in
+  let quad2 = seven_segments.(j) in
+  List.iteri (fun i c -> LCD.new_char i c) quad1;
+  List.iteri (fun i c -> LCD.new_char (i + 4) c) quad2;
+  LCD.move_cursor_abs (pos, 0);
+  LCD.message "\000\001\004\005";
+  LCD.move_cursor_abs (pos, 1);
+  LCD.message "\002\003\006\007";
 ;;

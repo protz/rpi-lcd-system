@@ -8,8 +8,12 @@ type button =
   | Up
   | Left
 
+type background =
+  | String of string
+  | Special of (unit -> unit)
+
 type t =
   | ButtonsPressed of button list
   | ButtonPressed of button
   | DisplayImmediate of string
-  | DisplayBackground of string
+  | DisplayBackground of background

@@ -13,11 +13,14 @@ let display ?(background: unit option) (msg: string): unit =
   CQ.add queue begin
     match background with
     | Some () ->
-        DisplayBackground msg
+        DisplayBackground (String msg)
     | None ->
         DisplayImmediate msg
   end
 ;;
+
+let display_special f =
+  CQ.add queue (DisplayBackground (Special f))
 
 let clear () =
   display ~background:() ""
@@ -36,7 +39,7 @@ let thread () =
         failwith "Bad usage for split_lines"
   in
 
-  let scroll (background_txt: string) (msg: string) (loop: bool): Message.t Lwt.t =
+  let scroll (background_txt: background) (msg: string) (loop: bool): Message.t Lwt.t =
     let msg = Misc.fix_accents msg in
     let line1, line2 = split_lines msg in
     let display str =
@@ -50,7 +53,6 @@ let thread () =
       fst (Lwt.wait ())
     else if String.length line1 <= lcd_width && String.length line2 <= lcd_width then begin
       display msg;
-      lwt () = Lwt_unix.sleep 1. in
       Lwt.return (DisplayBackground background_txt)
     end else
       (* Normalize by padding with spaces so that both have the same width. *)
@@ -102,18 +104,22 @@ let thread () =
     | DisplayImmediate txt ->
         lwt next_msg = scroll background_txt txt false in
         loop background_txt next_msg
-    | DisplayBackground txt ->
+    | DisplayBackground (String txt as background) ->
         lwt next_msg = Lwt.pick [
           take_msg ();
-          scroll txt txt true
+          scroll background txt true
         ] in
-        loop txt next_msg
+        loop background next_msg
+    | DisplayBackground (Special f as background) ->
+        f ();
+        lwt next_msg = take_msg () in
+        loop background next_msg
     | _ ->
         assert false
     end
   in
 
   lwt msg = take_msg () in
-  loop "" msg
+  loop (String "") msg
 ;;
 
