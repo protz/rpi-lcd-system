@@ -14,14 +14,9 @@ and entry =
   | Func of (unit -> unit Lwt.t)
 
 let main_menu : menu = [
-  "0. Time", Menu [
-    "0.1 Version 1", Func Heure.thread1;
-    "0.2 Version 2", Func Heure.thread2;
-  ];
-
   "1. Radios", Menu [
-    "1.1 FIP", Func Fip.thread;
-    "1.2 France Culture", Func (fun () -> Lwt_io.printl "entry 2");
+    "1.1 FIP", Func Radios.thread_fip;
+    "1.2 France Q", Func Radios.thread_franceq;
   ];
 
   "2. PulseAudio", Menu [
@@ -29,8 +24,13 @@ let main_menu : menu = [
     "2.2 Stream Name", Func (fun () -> Lwt_io.printl "entry 10");
   ];
 
-  "3. Test", Menu [
-    "3.1 Autoscroll", Func (fun () ->
+  "3. Misc", Menu [
+    "3.1 Time 1", Func Heure.thread1;
+    "3.2 Time 2", Func Heure.thread2;
+  ];
+
+  "4. Test", Menu [
+    "4.1 Autoscroll", Func (fun () ->
       (* Since we're bypassing the display thread for this test, wait for a
        * while the display thread is quiet. *)
       lwt () = Lwt_unix.sleep 2. in
@@ -56,7 +56,7 @@ let main_menu : menu = [
        * LCD doesn't give visually better results than re-writing everything by
        * hand as the display thread does. *)
     );
-    "3.2 Segments", Func (fun () ->
+    "4.2 Segments", Func (fun () ->
       (* Since we're bypassing the display thread for this test, wait for a
        * while the display thread is quiet. *)
       lwt () = Lwt_unix.sleep 0.5 in
@@ -71,9 +71,9 @@ let main_menu : menu = [
     );
   ];
 
-  "4. System", Menu [
-    "4.1 Power off", Func (fun () -> lwt _ = Lwt_unix.system "sudo /sbin/shutdown -h now" in Lwt.return ());
-    "4.2 Reboot", Func (fun () -> lwt _ = Lwt_unix.system "sudo /sbin/shutdown -r now" in Lwt.return ());
+  "5. System", Menu [
+    "5.1 Power off", Func (fun () -> lwt _ = Lwt_unix.system "sudo /sbin/shutdown -h now" in Lwt.return ());
+    "5.2 Reboot", Func (fun () -> lwt _ = Lwt_unix.system "sudo /sbin/shutdown -r now" in Lwt.return ());
   ];
 
 ]

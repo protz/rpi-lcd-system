@@ -1,0 +1,2 @@
+- Don't poll the JSON all the time for France Culture, since they have a pretty
+structured JSON, we should be able at least to cache it.

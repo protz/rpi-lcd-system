@@ -953,6 +953,17 @@ let accents_table = [
 ];;
 
 let fix_accents str =
+  (* Replace some characters that have an equivalent on the LCD *)
+  let re_known_accents = Pcre.regexp ~flags:[ `UTF8 ] "[º]" in
+  let str = Pcre.substitute
+    ~rex:re_known_accents
+    ~subst:(function
+      | "º" -> String.make 1 (Char.chr 0b11011111)
+      | _ -> assert false
+    )
+    str
+  in
+
   let re_accents = Pcre.regexp
     ~flags:[ `UTF8 ]
     ("[" ^ String.concat "" (List.map fst accents_table) ^ "]")
