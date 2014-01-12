@@ -127,12 +127,10 @@ let polling_thread () =
       loop ()
 
     with
-    | Network_error
-    | Yojson.Json_error _ ->
-        Printf.printf "[fip] error\n%!";
+    | _ ->
+        Printf.printf "[fip] exception %s\n%!" (Printexc.get_backtrace ());
         lwt () = Lwt_unix.sleep 5. in
         loop ()
-
   in
 
   loop ()

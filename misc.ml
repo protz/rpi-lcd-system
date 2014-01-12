@@ -786,7 +786,7 @@ let seven_segments =
     a ++ f ++ c ++ d ++ e ++ g;
     a ++ b ++ c;
     a ++ b ++ c ++ d ++ e ++ f ++ g;
-    a ++ b ++ c ++ d ++ g;
+    a ++ b ++ c ++ d ++ f ++ g;
     colon;
   |]
 ;;

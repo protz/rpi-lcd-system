@@ -53,6 +53,10 @@ let thread () =
       fst (Lwt.wait ())
     else if String.length line1 <= lcd_width && String.length line2 <= lcd_width then begin
       display msg;
+      (* If we're supposed to loop this message (i.e. it's a background scroll),
+       * then wait for a little bit otherwise there's an infinite loop of scroll
+       * / loop *)
+      lwt () = if loop then Lwt_unix.sleep 0.5 else Lwt.return () in
       Lwt.return (DisplayBackground background_txt)
     end else
       (* Normalize by padding with spaces so that both have the same width. *)
