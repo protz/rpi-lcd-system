@@ -177,7 +177,6 @@ let process_json_franceq json =
 let franceq = {
   name = "France Culture";
   process_json = process_json_franceq;
-  (* json_url = "http://www.franceculture.fr/sites/default/files/direct.json"; *)
   json_url = "http://www.franceculture.fr/sites/default/files/rf_player/player-direct.json";
   mp3_url = "http://mp3lg.tdf-cdn.com/franceculture/all/franceculturehautdebit.mp3";
 };;
