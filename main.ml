@@ -21,7 +21,7 @@ let main_menu : menu = [
 
   "2. PulseAudio", Menu [
     "2.1 Equalizer", Func (fun () -> Lwt_io.printl "entry 5");
-    "2.2 Stream Name", Func (fun () -> Lwt_io.printl "entry 10");
+    "2.2 Stream Name", Func Pulse.thread;
   ];
 
   "3. Misc", Menu [
@@ -157,6 +157,9 @@ let main: unit Lwt.t =
   ]
 
 let _ =
+  (* This variable is not set if we're being run from /etc/rc.local. *)
+  Unix.putenv "PULSE_SERVER" "localhost:4713";
+
   Lwt_main.run main;
 
   LCD.clear ();
