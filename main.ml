@@ -133,7 +133,21 @@ let handle_menu (m: menu) =
 ;;
 
 let menu_thread () =
-  handle_menu main_menu
+  let rec loop () =
+    lwt () = handle_menu main_menu in
+
+    LCD.clear ();
+    LCD.backlight LCD.off;
+    LCD.message "Display is off\nPress to wakeup";
+
+    lwt () = Button.wait_for_button () in
+
+    LCD.backlight LCD.teal;
+
+    loop ()
+  in
+
+  loop()
 ;;
 
 let main: unit Lwt.t =
@@ -155,14 +169,12 @@ let main: unit Lwt.t =
     (* So any of them terminates, it's this one, meaning the program's over! *)
     menu_thread ()
   ]
+;;
 
 let _ =
   (* This variable is not set if we're being run from /etc/rc.local. *)
   Unix.putenv "PULSE_SERVER" "localhost:4713";
 
   Lwt_main.run main;
-
-  LCD.clear ();
-  LCD.backlight LCD.off;
 ;;
 
