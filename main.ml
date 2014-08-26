@@ -17,6 +17,8 @@ let main_menu : menu = [
   "1. Radios", Menu [
     "1.1 FIP", Func Radios.thread_fip;
     "1.2 France Q", Func Radios.thread_franceq;
+    "1.3 7Inch Soul", Func Radios.thread_soma_7inch;
+    "1.4 Indie Pop!", Func Radios.thread_soma_indiepop;
   ];
 
   "2. PulseAudio", Menu [
@@ -101,7 +103,10 @@ let handle_menu (m: menu) =
             continue ()
         | Func f ->
             Display.display "\n  ... starting";
-            lwt () = f () in
+            lwt () = 
+              try_lwt f ()
+              with _ -> Printf.eprintf "[menu] error\n%!"; Lwt.return ()
+            in
             Printf.printf "[menu] function done\n%!";
             continue ()
         end;

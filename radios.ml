@@ -2,7 +2,7 @@
 type radio = {
   name: string;
   json_url: string;
-  process_json: Yojson.Safe.json -> t;
+  process: string -> t;
   mp3_url: string;
 }
 
@@ -18,118 +18,102 @@ type state = Before | Inside | After
 
 exception Network_error
 
-(* Fetch a JSON file. *)
-let rec fetch_json (json_url: string): Yojson.Safe.json Lwt.t =
-  (* The JSON has a very specific structure, so it's easy to extract the html
-   * bits from it. *)
-  lwt json = Cohttp_lwt_unix.Client.get (Uri.of_string json_url) in
-  match json with
+(* Fetch a file. *)
+let rec fetch_url (url: string): string Lwt.t =
+  lwt contents = Cohttp_lwt_unix.Client.get (Uri.of_string url) in
+  match contents with
   | Some (headers, body) ->
       let headers = Cohttp_lwt_unix.Client.Response.headers headers in
       begin match Cohttp.Header.get headers "location" with
       | Some loc ->
           Printf.printf "[fip] following redirect\n%!";
-          fetch_json loc
+          fetch_url loc
       | None ->
           lwt response = Cohttp_lwt_body.string_of_body body in
-          let json = Yojson.Safe.from_string response in
-          Lwt.return json
+          Lwt.return response
       end
   | None ->
       Printf.printf "[fip] network error\n%!";
       raise Network_error
 ;;
 
-let process_json_fip (json: Yojson.Safe.json) =
-  let html =
-    match json with
-    | `Assoc ["html", `String s; _] -> s
-    | _ -> assert false
-  in
+(* -------------------------------- Json Helpers ---------------------------- *)
 
-  let lines = Pcre.split ~pat:"\r?\n" html in
+let assert_find_assoc json key =
+  match json with
+  | `Assoc entries ->
+      List.assoc key entries
+  | _ -> raise Not_found
+;;
+let assert_list json =
+  match json with
+  | `List x -> x
+  | _ -> raise Not_found
+;;
+let assert_intlit json =
+  match json with
+  | `Intlit x -> float_of_string x
+  | _ -> raise Not_found
+;;
+let assert_string json =
+  match json with
+  | `String x -> x
+  | _ -> raise Not_found
+;;
+let key_string_or json key default =
+  try begin match assert_find_assoc json key with
+  | `String x -> x
+  | _ -> default
+  end with Not_found ->
+    default
+;;
 
-  (* The entry that we're about to build. *)
-  let entry = { artist = ""; title = ""; year = ""; cover_url = ""; album = "" } in
+(* -------------------------------- FIP ------------------------------------- *)
 
-  (* We have a state machine. We're either before the current entry, inside
-   * it, or we've gone past it. *)
-  let state = ref Before in
+let process_fip (response: string) =
+  let json = Yojson.Safe.from_string response in
+  try
+    let current = assert_find_assoc json "current" in
+    let song = assert_find_assoc current "song" in
+    let artist = key_string_or song "interpreteMorceau" "?" |> Misc.capitalize in
+    let title = key_string_or song "titre" "?" |> Misc.capitalize in
+    let album = key_string_or song "titreAlbum" "?" |> Misc.capitalize in
+    let year = key_string_or song "anneeEditionMusique" "?" in
+    let year = "(" ^ year ^ ")" in
+    let cover_url =
+      try
+        let visuel = assert_find_assoc song "visuel" in
+        key_string_or visuel "medium" ""
+      with Not_found ->
+        ""
+    in
 
-  (* Regexp-foo to fill in the current entry. *)
-  List.iter (fun line ->
-    if Pcre.pmatch ~pat:"class='direct-current'" line then
-      state := Inside;
+    { artist; title; album; year; cover_url }
 
-    let pat = "<div class=\"(artiste|titre|album|annee)\">([^<]+)" in
+  with e ->
+    Printf.printf "%s\n%!" (Printexc.to_string e);
+    Printexc.print_backtrace stdout;
 
-    begin try match Pcre.extract_opt ~pat line with
-    | [| _whole; Some c; Some contents |] when !state = Inside ->
-        if c = "artiste" then entry.artist <- contents;
-        if c = "titre" then entry.title <- contents;
-        if c = "album" then entry.album <- contents;
-        if c = "annee" then entry.year <- contents;
-    | _ ->
-        ()
-    with Not_found ->
-      ()
-    end;
-
-    let pat = "<img src=\"\\([^\"]+\\)" in
-
-    begin try match Pcre.extract_opt ~pat line with
-    | [| _whole; Some url |] when !state = Inside ->
-        entry.cover_url <- url
-    | _ ->
-        ()
-    with Not_found ->
-      ()
-    end;
-
-    if Pcre.pmatch ~pat:"class='direct-next'" line then
-      state := After;
-  ) lines;
-
-  (* No entry! *)
-  if !state = Before then begin
-    entry.artist <- "Détendez-vous";
-    entry.title <- "Vous êtes sur FIP!";
-    entry.album <- "(En direct)";
-    entry.year <- "";
-  end;
-
-  entry
+    {
+      artist = "Détendez-vous";
+      title = "Vous êtes sur FIP";
+      album = "(En direct)";
+      year = "";
+      cover_url = ""
+    }
 ;;
 
 let fip = {
   name = "FIP";
-  process_json = process_json_fip;
-  json_url = "http://www.fipradio.fr/sites/default/files/direct-large.json";
+  process = process_fip;
+  json_url = "http://www.fipradio.fr/sites/default/files/import_si/si_titre_antenne/FIP_player_current.json";
   mp3_url = "http://mp3.live.tv-radio.com/fip/all/fiphautdebit.mp3";
 };;
 
-let process_json_franceq json =
-  let assert_find_assoc json key =
-    match json with
-    | `Assoc entries ->
-        List.assoc key entries
-    | _ -> raise Not_found
-  in
-  let assert_list json =
-    match json with
-    | `List x -> x
-    | _ -> raise Not_found
-  in
-  let assert_intlit json =
-    match json with
-    | `Intlit x -> float_of_string x
-    | _ -> raise Not_found
-  in
-  let assert_string json =
-    match json with
-    | `String x -> x
-    | _ -> raise Not_found
-  in
+(* -------------------------------- France Q -------------------------------- *)
+
+let process_franceq response =
+  let json = Yojson.Safe.from_string response in
   let timeline = assert_find_assoc json "timeline" in
   let emissions = assert_find_assoc timeline "emissions" in
   let emissions = assert_list emissions in
@@ -176,10 +160,52 @@ let process_json_franceq json =
 
 let franceq = {
   name = "France Culture";
-  process_json = process_json_franceq;
+  process = process_franceq;
   json_url = "http://www.franceculture.fr/sites/default/files/rf_player/player-direct.json";
   mp3_url = "http://mp3lg.tdf-cdn.com/franceculture/all/franceculturehautdebit.mp3";
 };;
+
+(* -------------------------------- Indie Pop Rocks! ------------------------ *)
+
+let process_indiepop json =
+  let rex = Pcre.regexp ~flags:[ `MULTILINE ]
+    ">([^<]+)</a></td><td>([^<]+)</td><td><a[^>]+>([^<]*)</a></td>$"
+  in
+  match Pcre.extract_opt ~rex json with
+  | [| Some _everything; Some artist; Some title; Some album |] ->
+      { artist; title; year = ""; album; cover_url = "" }
+  | _ ->
+      raise Not_found
+;;
+
+let soma_indiepop = {
+  name = "Indie Pop Rocks!";
+  process = process_indiepop;
+  json_url = "http://somafm.com/recent/indiepop.html";
+  mp3_url = "http://ice.somafm.com/indiepop"
+};;
+
+(* -------------------------------- 7-Inch Soul ----------------------------- *)
+
+let process_7inch json =
+  let rex = Pcre.regexp ~flags:[ `MULTILINE ]
+    ">([^<]+)</a></td><td>([^<]+)</td><td>([^<]+)</td>$"
+  in
+  match Pcre.extract_opt ~rex json with
+  | [| Some _everything; Some artist; Some title; Some _single |] ->
+      { artist; title; year = ""; album = ""; cover_url = "" }
+  | _ ->
+      raise Not_found
+;;
+
+let soma_7inch = {
+  name = "7-Inch Soul";
+  process = process_7inch;
+  json_url = "http://somafm.com/recent/7soul.html";
+  mp3_url = "http://uwstream2.somafm.com:7770"
+};;
+
+(* -------------------------------- Main routines --------------------------- *)
 
 let polling_thread radio =
   (* We keep a current state, and try to refresh it every five seconds. We use
@@ -197,9 +223,9 @@ let polling_thread radio =
     try_lwt
 
       (* Fetch the html, split along the lines. *)
-      lwt json = fetch_json radio.json_url in
+      lwt response = fetch_url radio.json_url in
 
-      let entry = radio.process_json json in
+      let entry = radio.process response in
 
       (* Did the current song change? *)
       if entry <> !current_entry then begin
@@ -263,4 +289,11 @@ let thread_fip () =
 
 let thread_franceq () =
   thread franceq
+;;
+
+let thread_soma_indiepop () =
+  thread soma_indiepop
+;;
+let thread_soma_7inch () =
+  thread soma_7inch
 ;;

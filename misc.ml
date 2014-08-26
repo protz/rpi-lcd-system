@@ -1037,3 +1037,18 @@ let write_special_twodigits (i, j) pos =
   LCD.move_cursor_abs (pos, 1);
   LCD.message "\002\003\006\007";
 ;;
+
+let capitalize s =
+  let s = String.lowercase s in
+  let prev_char = ref ' ' in
+  let is_letter c =
+    let c = Char.code c in
+    Char.code 'a' <= c && c <= Char.code 'z' ||
+    Char.code 'A' <= c && c <= Char.code 'Z'
+  in
+  for i = 0 to String.length s - 1 do
+    if !prev_char = ' ' && is_letter s.[i] then
+      s.[i] <- Char.uppercase s.[i];
+    prev_char := s.[i];
+  done;
+  s
